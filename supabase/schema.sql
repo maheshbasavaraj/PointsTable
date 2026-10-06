@@ -34,6 +34,7 @@ insert into public.tournament_state(singleton, state) values (true, '{
     "Volleyball":{"A":[0,1,2],"B":[3,4,5]},
     "Badminton":{"A":[0,1,2],"B":[3,4,5]},
     "Tug of War":{"A":[0,1,2],"B":[3,4,5]},
+    "Chess":{"A":[0,1,2],"B":[3,4,5]},
     "Box Cricket":{"A":[0,1,2],"B":[3,4,5]}
   },
   "results": {}

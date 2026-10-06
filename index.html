@@ -505,8 +505,11 @@ eventSelect.addEventListener('change',()=>show(eventSelect.value));
 document.getElementById('overallBtn').addEventListener('click',()=>show('overall'));
 document.getElementById('setupBtn').addEventListener('click',()=>{if(!isAdmin)return;current='setup';tabs.querySelectorAll('.tab').forEach(b=>b.classList.remove('active'));content.innerHTML=setup();bind();});
 document.getElementById('loginBtn').addEventListener('click',()=>{
-  if(!db){message('Set the Supabase URL and publishable key in supabase-config.js first.');return;}
-  document.getElementById('loginPanel').hidden=false;
+  const panel=document.getElementById('loginPanel');
+  panel.hidden=false;
+  if(!db){message('Supabase is not connected. Check the URL and publishable key in supabase-config.js.');return;}
+  message('Enter your authorized admin username and password.');
+  document.getElementById('adminUsername').focus();
 });
 document.getElementById('cancelLogin').addEventListener('click',()=>{document.getElementById('loginPanel').hidden=true;});
   document.getElementById('loginPanel').addEventListener('submit',async e=>{
@@ -514,10 +517,13 @@ document.getElementById('cancelLogin').addEventListener('click',()=>{document.ge
   if(!db)return;
   const username=document.getElementById('adminUsername').value.trim();
   const password=document.getElementById('adminPassword').value;
+  if(!username || !password){message('Enter both your admin username and password.');return;}
+  message('Signing in…');
   const {data:admin,error:lookupError}=await db.from('tournament_admins').select('login_email').eq('username',username).maybeSingle();
-  if(lookupError || !admin?.login_email){message('Invalid admin username or password.');return;}
+  if(lookupError){message(`Could not check admin account: ${lookupError.message}`);return;}
+  if(!admin?.login_email){message('Invalid admin username or password.');return;}
   const {error}=await db.auth.signInWithPassword({email:admin.login_email,password});
-  if(error)message('Invalid admin username or password.');
+  if(error)message(error.message.includes('Email not confirmed')?'Confirm the admin email before signing in.':'Invalid admin username or password.');
 });
 document.getElementById('logoutBtn').addEventListener('click',()=>db?.auth.signOut());
 if(db){

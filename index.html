@@ -110,7 +110,7 @@ td{padding:11px 9px;border-bottom:1px solid #292929;font-size:13px}
 'use strict';
 
 const EVENTS = ['Basketball','Volleyball','Badminton','Tug of War','Chess','Box Cricket'];
-const POOL_EVENTS = ['Basketball','Volleyball','Badminton','Tug of War','Box Cricket'];
+const POOL_EVENTS = ['Basketball','Volleyball','Badminton','Tug of War','Chess','Box Cricket'];
 
 const state = {
   teams: ['Team A','Team B','Team C','Team D','Team E','Team F'],
@@ -147,7 +147,9 @@ async function loadRemote(){
   if(error){message(`Could not load the shared results: ${error.message}`);return;}
   const x=data?.state;
   if(x && Array.isArray(x.teams) && x.teams.length===6 && x.pools && x.results){
-    state.teams=x.teams;state.pools=x.pools;state.results=x.results;
+    state.teams=x.teams;
+    state.pools={...state.pools,...x.pools,Chess:x.pools.Chess||{A:[0,1,2],B:[3,4,5]}};
+    state.results=x.results;
     show(current);
   }
 }
@@ -199,18 +201,10 @@ function eventPoolStats(e){
   });
   return s;
 }
-function chessStats(){
-  const s=emptyStats();
-  for(let r=1;r<=6;r++){
-    const x=state.results[id('Chess','round',r)];
-    if(x) addResult(s,x.a,x.b,x.result);
-  }
-  return s;
-}
 function overallStats(){
   const s=emptyStats();
   EVENTS.forEach(e=>{
-    const x=e==='Chess' ? chessStats() : eventPoolStats(e);
+    const x=eventPoolStats(e);
     x.forEach((v,i)=>{
       ['m','w','d','l','p'].forEach(k=>s[i][k]+=v[k]);
     });
@@ -377,10 +371,10 @@ function chess(){
   }
   return `<div class="grid">
     <section class="card">
-      <h2>♟ Chess — 6-Round Swiss</h2>
-      <div class="desc">Each team receives 6 matches. Enter the actual Swiss pairings for each round.</div>
+      <h2>♟ Chess — Pool Stage</h2>
+      <div class="desc">Two pools of three teams. Each team plays the other two teams in its pool.</div>
       ${matches}
-      <div class="note">The website does not automatically generate Swiss pairings; you can enter the pairings decided by the organizers. Each recorded result contributes to the overall championship.</div>
+      <div class="note">The winner of Pool A plays the winner of Pool B in the final. Use Team & Pool Setup to assign the pools.</div>
     </section>
     <section class="card">
       <h2>Chess Standings</h2>
@@ -437,7 +431,7 @@ function overall(){
         <b>Tug of War:</b> 2 pools → pool winners → final.<br><br>
         <b>Badminton:</b> 2 pools → top 2 from each pool → semifinals → final.<br><br>
         <b>Box Cricket:</b> 2 pools → top 2 from each pool → semifinals → final.<br><br>
-        <b>Chess:</b> Swiss format → 6 matches per team.
+        <b>Chess:</b> 2 pools → pool winners → final.
       </div>
       <div class="section-title">Scoring</div>
       <div class="note">Win = <b>2 points</b> • Draw = <b>1 point each</b> • Loss = <b>0 points</b></div>
@@ -449,7 +443,6 @@ function show(e){
   eventSelect.value=e;
   tabs.querySelectorAll('.tab').forEach(b=>b.classList.toggle('active',b.dataset.event===e));
   if(e==='overall') content.innerHTML=overall();
-  else if(e==='Chess') content.innerHTML=chess();
   else content.innerHTML=`<div class="grid">${poolMatches(e)}</div><div class="grid" style="margin-top:15px">${knockout(e)}</div>
     <section class="card" style="margin-top:15px"><h2>${esc(e)} — Combined Points</h2><div class="desc">Pool-stage points plus knockout points already recorded.</div>${table(eventPoolStats(e))}</section>`;
   bind();

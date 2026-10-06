@@ -91,7 +91,7 @@ td{padding:11px 9px;border-bottom:1px solid #292929;font-size:13px}
     <button class="btn admin-only" id="logoutBtn" hidden>Sign out</button>
   </div>
   <form class="card auth-form" id="loginPanel" hidden>
-    <input id="adminEmail" type="email" autocomplete="username" placeholder="Admin email" required>
+    <input id="adminUsername" type="text" autocomplete="username" placeholder="Admin username" required>
     <input id="adminPassword" type="password" autocomplete="current-password" placeholder="Password" required>
     <button class="btn primary" type="submit">Sign in</button>
     <button class="btn" type="button" id="cancelLogin">Cancel</button>
@@ -505,17 +505,36 @@ eventSelect.addEventListener('change',()=>show(eventSelect.value));
 document.getElementById('overallBtn').addEventListener('click',()=>show('overall'));
 document.getElementById('setupBtn').addEventListener('click',()=>{if(!isAdmin)return;current='setup';tabs.querySelectorAll('.tab').forEach(b=>b.classList.remove('active'));content.innerHTML=setup();bind();});
 document.getElementById('loginBtn').addEventListener('click',()=>{
-  if(!db){message('Set the Supabase URL and publishable key in supabase-config.js first.');return;}
-  document.getElementById('loginPanel').hidden=false;
+  const panel=document.getElementById('loginPanel');
+  panel.hidden=false;
+  if(!db){message('Supabase is not connected. Check the URL and publishable key in supabase-config.js.');return;}
+  message('Enter your authorized admin username and password.');
+  document.getElementById('adminUsername').focus();
 });
 document.getElementById('cancelLogin').addEventListener('click',()=>{document.getElementById('loginPanel').hidden=true;});
-document.getElementById('loginPanel').addEventListener('submit',async e=>{
+  document.getElementById('loginPanel').addEventListener('submit',async e=>{
   e.preventDefault();
   if(!db)return;
-  const {error}=await db.auth.signInWithPassword({email:document.getElementById('adminEmail').value,password:document.getElementById('adminPassword').value});
-  if(error)message(`Sign in failed: ${error.message}`);
+  const username=document.getElementById('adminUsername').value.trim();
+  const password=document.getElementById('adminPassword').value;
+  if(!username || !password){message('Enter both your admin username and password.');return;}
+  message('Signing in…');
+  const {data:admin,error:lookupError}=await db.from('tournament_admins').select('login_email').eq('username',username).maybeSingle();
+  if(lookupError){message(`Could not check admin account: ${lookupError.message}`);return;}
+  if(!admin?.login_email){message('Invalid admin username or password.');return;}
+  const {error}=await db.auth.signInWithPassword({email:admin.login_email,password});
+  if(error)message(error.message.includes('Email not confirmed')?'Confirm the admin email before signing in.':'Invalid admin username or password.');
 });
 document.getElementById('logoutBtn').addEventListener('click',()=>db?.auth.signOut());
+if(db){
+  db.auth.onAuthStateChange(async (_event,session)=>{
+    if(!session?.user){isAdmin=false;renderAccess();return;}
+    const {data:admin}=await db.from('tournament_admins').select('user_id').eq('user_id',session.user.id).maybeSingle();
+    isAdmin=Boolean(admin);
+    renderAccess();
+    if(isAdmin){document.getElementById('loginPanel').hidden=true;message('Admin signed in.');show(current);}
+  });
+}
 document.getElementById('exportBtn').addEventListener('click',()=>{
   const blob=new Blob([JSON.stringify(state,null,2)],{type:'application/json'});
   const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='sports-day-results.json';a.click();URL.revokeObjectURL(a.href);

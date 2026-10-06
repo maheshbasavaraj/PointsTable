@@ -1,0 +1,564 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sports Day • Overall Championship</title>
+<meta name="description" content="Sports Day live points table and overall championship tracker">
+<style>
+:root{
+  --orange:#ff6500; --orange2:#ff8a00; --bg:#080808; --panel:#111;
+  --card:#171717; --line:#303030; --muted:#a7a7a7; --text:#f5f5f5;
+  --green:#43d17a; --gold:#ffd166;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif}
+button,select,input{font:inherit}
+button{cursor:pointer}
+.app{max-width:1200px;margin:auto;padding:22px}
+.hero{border:1px solid var(--line);border-radius:18px;padding:22px;background:
+ linear-gradient(135deg,#111 0%,#171717 60%,#0d0d0d 100%);display:flex;
+ justify-content:space-between;gap:20px;align-items:center}
+.kicker{color:var(--orange2);font-size:12px;font-weight:900;letter-spacing:2px}
+h1{font-size:34px;line-height:1.05;margin:7px 0}
+.subtitle{color:var(--muted);font-size:14px}
+.trophy{font-size:58px}
+.toolbar{display:flex;gap:9px;flex-wrap:wrap;margin:16px 0}
+select,input,.btn{background:#191919;color:#fff;border:1px solid #444;border-radius:9px;padding:10px 12px;min-height:42px}
+.btn{font-weight:800}
+.btn.primary{background:var(--orange);border-color:var(--orange);color:#111}
+.btn.danger{border-color:#743333}
+.tabs{display:flex;gap:7px;overflow:auto;padding-bottom:4px;margin-bottom:16px}
+.tab{white-space:nowrap;border:1px solid #333;background:#151515;color:#ccc;border-radius:999px;padding:9px 14px;font-weight:800}
+.tab.active{background:var(--orange);border-color:var(--orange);color:#111}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:15px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:15px;padding:16px}
+.card h2{font-size:18px;margin:0 0 5px}
+.desc{font-size:12px;color:var(--muted);margin-bottom:14px}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:14px}
+.stat{background:#181818;border:1px solid #292929;border-radius:10px;padding:10px}
+.stat b{display:block;font-size:19px}.stat span{font-size:9px;color:#999;text-transform:uppercase}
+.table-wrap{overflow:auto}
+table{width:100%;border-collapse:collapse;min-width:570px}
+th{text-align:left;font-size:10px;color:#999;text-transform:uppercase;letter-spacing:.7px;padding:9px;border-bottom:1px solid #333}
+td{padding:11px 9px;border-bottom:1px solid #292929;font-size:13px}
+.rank{font-weight:900;color:#888}.team{font-weight:850}.points{font-weight:950;font-size:18px;color:var(--orange2)}
+.champion{background:rgba(255,101,0,.11)}
+.match{display:grid;grid-template-columns:1fr 110px 1fr;gap:8px;align-items:center;padding:9px 0;border-bottom:1px solid #292929}
+.match:last-child{border-bottom:0}
+.team-name{font-size:13px;font-weight:800}.team-name.right{text-align:right}
+.result{width:100%;padding:8px 4px;background:#1b1b1b;color:#fff;border:1px solid #444;border-radius:8px}
+.section-title{color:var(--orange2);font-size:12px;font-weight:900;letter-spacing:.8px;text-transform:uppercase;margin:15px 0 7px}
+.note{border:1px dashed #3a3a3a;border-radius:9px;padding:11px;color:#aaa;font-size:12px;line-height:1.5}
+.pool-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.pool-card{background:#151515;border:1px solid #2d2d2d;border-radius:12px;padding:12px}
+.pool-card h3{margin:0 0 10px;font-size:15px}
+.pool-team{display:flex;gap:7px;margin:7px 0}.pool-team select{width:100%}
+.small{font-size:11px;color:#999}
+.knockout{border-left:3px solid var(--orange);padding-left:12px}
+.champ-banner{padding:18px;border-radius:14px;border:1px solid #5a3b12;background:linear-gradient(135deg,#21160c,#15110c);margin-bottom:15px}
+.champ-banner .big{font-size:27px;font-weight:950;color:var(--gold)}
+.empty{padding:15px;border:1px dashed #3a3a3a;border-radius:10px;color:#999}
+.footer{color:#777;font-size:11px;text-align:center;margin:20px 0 5px}
+.result-display{display:block;text-align:center;color:var(--orange2);font-size:12px;font-weight:800}
+.notice{display:none;border:1px solid #69401e;border-radius:9px;background:#21170f;color:#ffcb98;padding:10px 13px;margin:12px 0;font-size:13px}
+.notice.show{display:block}.auth-form{display:flex;gap:8px;flex-wrap:wrap;align-items:center}.auth-form input{min-width:180px}#loginPanel[hidden]{display:none}
+@media(max-width:760px){
+ .app{padding:13px}.hero{padding:17px}.trophy{display:none}h1{font-size:26px}
+ .grid,.pool-grid{grid-template-columns:1fr}.stats{grid-template-columns:repeat(2,1fr)}
+ .match{grid-template-columns:1fr 95px 1fr}
+}
+</style>
+</head>
+<body>
+<div class="app" id="app">
+  <section class="hero">
+    <div>
+      <div class="kicker">DEPARTMENT OF CSE – DATA SCIENCE • SPORTS DAY</div>
+      <h1>🏆 Overall Championship</h1>
+      <div class="subtitle">Pool Stage • Knockouts • 6-Round Swiss Chess • Live Points Table</div>
+    </div>
+    <div class="trophy">🏆</div>
+  </section>
+
+  <div class="toolbar">
+    <select id="eventSelect" aria-label="Select event"></select>
+    <button class="btn primary" id="overallBtn">Overall Championship</button>
+    <button class="btn admin-only" id="setupBtn" hidden>Team & Pool Setup</button>
+    <button class="btn" id="exportBtn">Export Results</button>
+    <button class="btn danger admin-only" id="resetBtn" hidden>Reset</button>
+    <button class="btn" id="loginBtn">Admin Login</button>
+    <button class="btn admin-only" id="logoutBtn" hidden>Sign out</button>
+  </div>
+  <form class="card auth-form" id="loginPanel" hidden>
+    <input id="adminEmail" type="email" autocomplete="username" placeholder="Admin email" required>
+    <input id="adminPassword" type="password" autocomplete="current-password" placeholder="Password" required>
+    <button class="btn primary" type="submit">Sign in</button>
+    <button class="btn" type="button" id="cancelLogin">Cancel</button>
+  </form>
+  <div class="notice" id="notice" role="status" aria-live="polite"></div>
+
+  <div class="tabs" id="tabs"></div>
+  <main id="content"></main>
+  <div class="footer">Win = 2 points • Draw = 1 point each • Loss = 0 points</div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="./supabase-config.js"></script>
+<script>
+(() => {
+'use strict';
+
+const EVENTS = ['Basketball','Volleyball','Badminton','Tug of War','Chess','Box Cricket'];
+const POOL_EVENTS = ['Basketball','Volleyball','Badminton','Tug of War','Box Cricket'];
+
+const state = {
+  teams: ['Team A','Team B','Team C','Team D','Team E','Team F'],
+  pools: {},
+  results: {}
+};
+
+const config = window.SUPABASE_CONFIG || {};
+const db = window.supabase && config.url && config.publishableKey
+  ? window.supabase.createClient(config.url, config.publishableKey)
+  : null;
+let isAdmin = false;
+const notice = document.getElementById('notice');
+function message(text){notice.textContent=text;notice.classList.toggle('show',Boolean(text));}
+function renderAccess(){
+  document.querySelectorAll('.admin-only').forEach(el=>{el.hidden=!isAdmin;});
+  document.getElementById('loginBtn').hidden=isAdmin;
+  if(!isAdmin) document.getElementById('loginPanel').hidden=true;
+}
+
+POOL_EVENTS.forEach(e => state.pools[e] = {A:[0,1,2], B:[3,4,5]});
+
+let current = 'overall';
+
+async function save(){
+  if(!db || !isAdmin){message('Sign in as the authorized admin to save changes.');return false;}
+  const {error}=await db.from('tournament_state').update({state:{teams:state.teams,pools:state.pools,results:state.results},updated_at:new Date().toISOString()}).eq('singleton',true);
+  if(error){message(`Could not save: ${error.message}`);return false;}
+  message('Saved. Public standings are updated.');return true;
+}
+async function loadRemote(){
+  if(!db)return;
+  const {data,error}=await db.from('tournament_state').select('state').eq('singleton',true).single();
+  if(error){message(`Could not load the shared results: ${error.message}`);return;}
+  const x=data?.state;
+  if(x && Array.isArray(x.teams) && x.teams.length===6 && x.pools && x.results){
+    state.teams=x.teams;state.pools=x.pools;state.results=x.results;
+    show(current);
+  }
+}
+
+const eventSelect = document.getElementById('eventSelect');
+const tabs = document.getElementById('tabs');
+const content = document.getElementById('content');
+
+EVENTS.forEach(e => {
+  const o = document.createElement('option');
+  o.value = e; o.textContent = e;
+  eventSelect.appendChild(o);
+
+  const b = document.createElement('button');
+  b.className = 'tab'; b.type = 'button'; b.textContent = e;
+  b.dataset.event = e;
+  b.addEventListener('click', () => show(e));
+  tabs.appendChild(b);
+});
+
+function esc(v){
+  return String(v).replace(/[&<>"']/g, c => ({
+    '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
+  }[c]));
+}
+function pairs(indices){
+  const out=[];
+  for(let i=0;i<indices.length;i++)
+    for(let j=i+1;j<indices.length;j++) out.push([indices[i],indices[j]]);
+  return out;
+}
+function emptyStats(){
+  return state.teams.map(() => ({m:0,w:0,d:0,l:0,p:0}));
+}
+function addResult(s,a,b,r){
+  if(r !== 'A' && r !== 'B' && r !== 'D') return;
+  s[a].m++; s[b].m++;
+  if(r==='A'){s[a].w++;s[b].l++;s[a].p+=2}
+  if(r==='B'){s[b].w++;s[a].l++;s[b].p+=2}
+  if(r==='D'){s[a].d++;s[b].d++;s[a].p++;s[b].p++}
+}
+function id(...x){return x.join('|')}
+function eventPoolStats(e){
+  const s=emptyStats();
+  ['A','B'].forEach(pool=>{
+    pairs(state.pools[e][pool]).forEach(([a,b])=>{
+      addResult(s,a,b,state.results[id(e,'pool',pool,a,b)]);
+    });
+  });
+  return s;
+}
+function chessStats(){
+  const s=emptyStats();
+  for(let r=1;r<=6;r++){
+    const x=state.results[id('Chess','round',r)];
+    if(x) addResult(s,x.a,x.b,x.result);
+  }
+  return s;
+}
+function overallStats(){
+  const s=emptyStats();
+  EVENTS.forEach(e=>{
+    const x=e==='Chess' ? chessStats() : eventPoolStats(e);
+    x.forEach((v,i)=>{
+      ['m','w','d','l','p'].forEach(k=>s[i][k]+=v[k]);
+    });
+    if(e!=='Chess'){
+      addKnockoutPoints(e,s);
+    }
+  });
+  return s;
+}
+function addKnockoutPoints(e,s){
+  const q=qualified(e);
+  if(e==='Badminton' || e==='Box Cricket'){
+    if(q.A.length>=2 && q.B.length>=2){
+      addResult(s,q.A[0],q.B[1],state.results[id(e,'semi',1)]);
+      addResult(s,q.B[0],q.A[1],state.results[id(e,'semi',2)]);
+      const s1=winner(q.A[0],q.B[1],state.results[id(e,'semi',1)]);
+      const s2=winner(q.B[0],q.A[1],state.results[id(e,'semi',2)]);
+      if(s1!==null && s2!==null) addResult(s,s1,s2,state.results[id(e,'final')]);
+    }
+  } else {
+    const a=poolWinner(e,'A'), b=poolWinner(e,'B');
+    if(a!==null && b!==null) addResult(s,a,b,state.results[id(e,'final')]);
+  }
+}
+function ranked(s){
+  return s.map((x,i)=>({...x,index:i,team:state.teams[i]}))
+    .sort((a,b)=>b.p-a.p || b.w-a.w || b.d-a.d || a.l-b.l || a.team.localeCompare(b.team));
+}
+function table(s){
+  const rows=ranked(s);
+  return `<div class="table-wrap"><table>
+    <thead><tr><th>#</th><th>Team</th><th>MP</th><th>W</th><th>D</th><th>L</th><th>Points</th></tr></thead>
+    <tbody>${rows.map((x,i)=>`
+      <tr class="${i===0 && x.p>0 ? 'champion':''}">
+        <td class="rank">${i+1}</td>
+        <td class="team">${i===0 && x.p>0?'🏆 ':''}${esc(x.team)}</td>
+        <td>${x.m}</td><td>${x.w}</td><td>${x.d}</td><td>${x.l}</td>
+        <td class="points">${x.p}</td>
+      </tr>`).join('')}</tbody>
+  </table></div>`;
+}
+function resultSelect(a,b,key){
+  const v=state.results[key] || '';
+  if(!isAdmin){
+    const label=v==='A'?`${state.teams[a]} Win`:v==='B'?`${state.teams[b]} Win`:v==='D'?'Draw':'—';
+    return `<span class="result-display">${esc(label)}</span>`;
+  }
+  return `<select class="result" data-result="${esc(key)}">
+    <option value="">—</option>
+    <option value="A" ${v==='A'?'selected':''}>${esc(state.teams[a])} Win</option>
+    <option value="D" ${v==='D'?'selected':''}>Draw</option>
+    <option value="B" ${v==='B'?'selected':''}>${esc(state.teams[b])} Win</option>
+  </select>`;
+}
+function match(a,b,key){
+  return `<div class="match">
+    <div class="team-name">${esc(state.teams[a])}</div>
+    ${resultSelect(a,b,key)}
+    <div class="team-name right">${esc(state.teams[b])}</div>
+  </div>`;
+}
+function winner(a,b,r){
+  if(r==='A') return a;
+  if(r==='B') return b;
+  return null;
+}
+function poolStandings(e,pool){
+  const s=emptyStats();
+  pairs(state.pools[e][pool]).forEach(([a,b])=>{
+    addResult(s,a,b,state.results[id(e,'pool',pool,a,b)]);
+  });
+  return ranked(s).filter(x=>state.pools[e][pool].includes(x.index));
+}
+function poolWinner(e,pool){
+  const r=poolStandings(e,pool);
+  return r.length===3 && r.every(x=>x.m===2) ? r[0].index : null;
+}
+function qualified(e){
+  const complete=pool=>{
+    const rows=poolStandings(e,pool);
+    return rows.length===3 && rows.every(x=>x.m===2);
+  };
+  return {
+    A:complete('A')?poolStandings(e,'A').slice(0,2).map(x=>x.index):[],
+    B:complete('B')?poolStandings(e,'B').slice(0,2).map(x=>x.index):[]
+  };
+}
+function poolTable(e,pool){
+  const rows = poolStandings(e,pool);
+  return `<div class="table-wrap"><table>
+    <thead><tr><th>#</th><th>Team</th><th>MP</th><th>W</th><th>D</th><th>L</th><th>Points</th></tr></thead>
+    <tbody>${rows.map((x,i)=>`
+      <tr class="${i===0 && x.p>0 ? 'champion':''}">
+        <td class="rank">${i+1}</td>
+        <td class="team">${i===0 && x.p>0?'🏆 ':''}${esc(x.team)}</td>
+        <td>${x.m}</td><td>${x.w}</td><td>${x.d}</td><td>${x.l}</td>
+        <td class="points">${x.p}</td>
+      </tr>`).join('')}</tbody>
+  </table></div>`;
+}
+function poolMatches(e){
+  return ['A','B'].map(pool=>`
+    <section class="card">
+      <h2>Pool ${pool}</h2>
+      <div class="desc">3-team league — each team plays the other two teams.</div>
+      ${pairs(state.pools[e][pool]).map(([a,b])=>match(a,b,id(e,'pool',pool,a,b))).join('')}
+      <div class="section-title">Current Pool Standings</div>
+      ${poolTable(e,pool)}
+    </section>`).join('');
+}
+function knockout(e){
+  const q=qualified(e);
+  let html='';
+  if(e==='Badminton'||e==='Box Cricket'){
+    html+=`<section class="card"><h2>Semifinals</h2><div class="desc">Top 2 teams from each pool qualify.</div>`;
+    if(q.A.length>=2 && q.B.length>=2){
+      html+=match(q.A[0],q.B[1],id(e,'semi',1));
+      html+=match(q.B[0],q.A[1],id(e,'semi',2));
+    }else html+='<div class="empty">Complete the pool matches to determine the semifinalists.</div>';
+    html+='</section>';
+
+    const s1=q.A.length>=2&&q.B.length>=2?winner(q.A[0],q.B[1],state.results[id(e,'semi',1)]):null;
+    const s2=q.A.length>=2&&q.B.length>=2?winner(q.B[0],q.A[1],state.results[id(e,'semi',2)]):null;
+    html+=`<section class="card"><h2>Final</h2><div class="desc">Semifinal winners meet in the final.</div>`;
+    if(s1!==null && s2!==null) html+=match(s1,s2,id(e,'final'));
+    else html+='<div class="empty">Complete both semifinals to determine the finalists.</div>';
+    html+='</section>';
+  }else{
+    html+=`<section class="card"><h2>Final</h2><div class="desc">Winner of Pool A vs Winner of Pool B.</div>`;
+    const a=poolWinner(e,'A'),b=poolWinner(e,'B');
+    if(a!==null&&b!==null) html+=match(a,b,id(e,'final'));
+    else html+='<div class="empty">Complete both pool stages to determine the finalists.</div>';
+    html+='</section>';
+  }
+  return html;
+}
+function chess(){
+  let matches='';
+  for(let r=1;r<=6;r++){
+    const saved=state.results[id('Chess','round',r)];
+    if(!isAdmin && !saved){matches+=`<div class="section-title">Round ${r}</div><div class="empty">Pairing not entered.</div>`;continue;}
+    const x=saved || {a:0,b:1,result:''};
+    if(!isAdmin){
+      const result=x.result==='A'?'Left wins':x.result==='B'?'Right wins':x.result==='D'?'Draw':'Not played';
+      matches+=`<div class="section-title">Round ${r}</div><div class="match"><div class="team-name">${esc(state.teams[x.a])}</div><span class="result-display">${result}</span><div class="team-name right">${esc(state.teams[x.b])}</div></div>`;
+      continue;
+    }
+    matches+=`
+      <div class="section-title">Round ${r}</div>
+      <div class="match">
+        <select class="result chess-team" data-round="${r}" data-side="a">
+          ${state.teams.map((t,i)=>`<option value="${i}" ${i===x.a?'selected':''}>${esc(t)}</option>`).join('')}
+        </select>
+        <select class="result" data-chess-result="${r}">
+          <option value="">—</option>
+          <option value="A" ${x.result==='A'?'selected':''}>White/Left Win</option>
+          <option value="D" ${x.result==='D'?'selected':''}>Draw</option>
+          <option value="B" ${x.result==='B'?'selected':''}>Right Win</option>
+        </select>
+        <select class="result chess-team" data-round="${r}" data-side="b">
+          ${state.teams.map((t,i)=>`<option value="${i}" ${i===x.b?'selected':''}>${esc(t)}</option>`).join('')}
+        </select>
+      </div>`;
+  }
+  return `<div class="grid">
+    <section class="card">
+      <h2>♟ Chess — 6-Round Swiss</h2>
+      <div class="desc">Each team receives 6 matches. Enter the actual Swiss pairings for each round.</div>
+      ${matches}
+      <div class="note">The website does not automatically generate Swiss pairings; you can enter the pairings decided by the organizers. Each recorded result contributes to the overall championship.</div>
+    </section>
+    <section class="card">
+      <h2>Chess Standings</h2>
+      <div class="desc">Win = 2 • Draw = 1 • Loss = 0</div>
+      ${table(chessStats())}
+    </section>
+  </div>`;
+}
+function setup(){
+  return `<section class="card">
+    <h2>Team & Pool Setup</h2>
+    <div class="desc">Rename the six teams and assign three teams to each pool for every pool-based event.</div>
+    <div class="pool-grid">
+      ${state.teams.map((t,i)=>`<div class="pool-team">
+        <label class="small" style="width:22px;padding-top:11px">${i+1}</label>
+        <input class="team-input" data-index="${i}" value="${esc(t)}" aria-label="Team ${i+1} name">
+      </div>`).join('')}
+    </div>
+    <button class="btn primary" id="saveTeams">Save Team Names</button>
+    ${POOL_EVENTS.map(e=>`
+      <div class="section-title">${esc(e)} Pools</div>
+      <div class="pool-grid">
+        ${['A','B'].map(p=>`
+          <div class="pool-card"><h3>Pool ${p}</h3>
+          ${[0,1,2].map(slot=>`
+            <select class="pool-select" data-event="${esc(e)}" data-pool="${p}" data-slot="${slot}">
+              ${state.teams.map((t,i)=>`<option value="${i}" ${state.pools[e][p][slot]===i?'selected':''}>${esc(t)}</option>`).join('')}
+            </select>`).join('')}
+          </div>`).join('')}
+      </div>`).join('')}
+    <div style="margin-top:15px"><button class="btn primary" id="savePools">Save Pool Assignments</button></div>
+  </section>`;
+}
+function overall(){
+  const s=overallStats(), rows=ranked(s), leader=rows.find(x=>x.p>0);
+  return `${leader?`<div class="champ-banner"><div class="small">CURRENT LEADER</div><div class="big">🏆 ${esc(leader.team)}</div><div>${leader.p} championship points</div></div>`:''}
+  <div class="grid">
+    <section class="card">
+      <h2>🏆 Overall Championship Points Table</h2>
+      <div class="desc">All recorded pool, semifinal, final and chess results are combined.</div>
+      <div class="stats">
+        <div class="stat"><b>6</b><span>Events</span></div>
+        <div class="stat"><b>6</b><span>Teams</span></div>
+        <div class="stat"><b>2</b><span>Win Points</span></div>
+        <div class="stat"><b>1</b><span>Draw Points</span></div>
+      </div>
+      ${table(s)}
+    </section>
+    <section class="card">
+      <h2>Tournament Format</h2>
+      <div class="note">
+        <b>Basketball:</b> 2 pools → pool winners → final.<br><br>
+        <b>Volleyball:</b> 2 pools → pool winners → final.<br><br>
+        <b>Tug of War:</b> 2 pools → pool winners → final.<br><br>
+        <b>Badminton:</b> 2 pools → top 2 from each pool → semifinals → final.<br><br>
+        <b>Box Cricket:</b> 2 pools → top 2 from each pool → semifinals → final.<br><br>
+        <b>Chess:</b> Swiss format → 6 matches per team.
+      </div>
+      <div class="section-title">Scoring</div>
+      <div class="note">Win = <b>2 points</b> • Draw = <b>1 point each</b> • Loss = <b>0 points</b></div>
+    </section>
+  </div>`;
+}
+function show(e){
+  current=e;
+  eventSelect.value=e;
+  tabs.querySelectorAll('.tab').forEach(b=>b.classList.toggle('active',b.dataset.event===e));
+  if(e==='overall') content.innerHTML=overall();
+  else if(e==='Chess') content.innerHTML=chess();
+  else content.innerHTML=`<div class="grid">${poolMatches(e)}</div><div class="grid" style="margin-top:15px">${knockout(e)}</div>
+    <section class="card" style="margin-top:15px"><h2>${esc(e)} — Combined Points</h2><div class="desc">Pool-stage points plus knockout points already recorded.</div>${table(eventPoolStats(e))}</section>`;
+  bind();
+}
+function bind(){
+  if(!isAdmin)return;
+  content.querySelectorAll('[data-result]').forEach(el=>{
+    el.addEventListener('change',()=>{
+      const key=el.dataset.result,old=state.results[key];
+      if(el.value)state.results[key]=el.value;else delete state.results[key];
+      save().then(ok=>{if(ok)show(current);else{if(old)state.results[key]=old;else delete state.results[key];show(current);}});
+    });
+  });
+  content.querySelectorAll('[data-chess-result]').forEach(el=>{
+    el.addEventListener('change',()=>{
+      const r=Number(el.dataset.chessResult);
+      const aEl=content.querySelector(`.chess-team[data-round="${r}"][data-side="a"]`);
+      const bEl=content.querySelector(`.chess-team[data-round="${r}"][data-side="b"]`);
+      if(aEl.value===bEl.value){alert('A team cannot play itself.');return;}
+      const key=id('Chess','round',r),old=state.results[key];
+      state.results[key]={a:Number(aEl.value),b:Number(bEl.value),result:el.value};
+      save().then(ok=>{if(ok)show('Chess');else{if(old)state.results[key]=old;else delete state.results[key];show('Chess');}});
+    });
+  });
+  content.querySelectorAll('.chess-team').forEach(el=>{
+    el.addEventListener('change',()=>{
+      const r=Number(el.dataset.round);
+      const a=Number(content.querySelector(`.chess-team[data-round="${r}"][data-side="a"]`).value);
+      const b=Number(content.querySelector(`.chess-team[data-round="${r}"][data-side="b"]`).value);
+      if(a===b){alert('A team cannot play itself.');show('Chess');return;}
+      const old=state.results[id('Chess','round',r)]||{};
+      const key=id('Chess','round',r),prior=state.results[key];
+      state.results[key]={a,b,result:old.result||''};
+      save().then(ok=>{if(ok)show('Chess');else{if(prior)state.results[key]=prior;else delete state.results[key];show('Chess');}});
+    });
+  });
+  document.getElementById('saveTeams')?.addEventListener('click',()=>{
+    const prior=JSON.stringify(state);
+    content.querySelectorAll('.team-input').forEach(el=>{
+      const v=el.value.trim();
+      if(v) state.teams[Number(el.dataset.index)]=v;
+    });
+    save().then(ok=>{if(ok)show('overall');else{Object.assign(state,JSON.parse(prior));show('setup');}});
+  });
+  document.getElementById('savePools')?.addEventListener('click',()=>{
+    const prior=JSON.stringify(state);
+    POOL_EVENTS.forEach(e=>{
+      ['A','B'].forEach(p=>{
+        const vals=[...content.querySelectorAll(`.pool-select[data-event="${e}"][data-pool="${p}"]`)].map(x=>Number(x.value));
+        if(new Set(vals).size!==3){message(`${e} Pool ${p} must contain three different teams.`);return;}
+        state.pools[e][p]=vals;
+      });
+    });
+    const valid=POOL_EVENTS.every(e=>new Set([...state.pools[e].A,...state.pools[e].B]).size===6);
+    if(!valid){Object.assign(state,JSON.parse(prior));message('Each event must assign every team to exactly one pool.');return;}
+    save().then(ok=>{if(ok)show('overall');else{Object.assign(state,JSON.parse(prior));show('setup');}});
+  });
+}
+eventSelect.addEventListener('change',()=>show(eventSelect.value));
+document.getElementById('overallBtn').addEventListener('click',()=>show('overall'));
+document.getElementById('setupBtn').addEventListener('click',()=>{if(!isAdmin)return;current='setup';tabs.querySelectorAll('.tab').forEach(b=>b.classList.remove('active'));content.innerHTML=setup();bind();});
+document.getElementById('loginBtn').addEventListener('click',()=>{
+  if(!db){message('Set the Supabase URL and publishable key in supabase-config.js first.');return;}
+  document.getElementById('loginPanel').hidden=false;
+});
+document.getElementById('cancelLogin').addEventListener('click',()=>{document.getElementById('loginPanel').hidden=true;});
+document.getElementById('loginPanel').addEventListener('submit',async e=>{
+  e.preventDefault();
+  if(!db)return;
+  const {error}=await db.auth.signInWithPassword({email:document.getElementById('adminEmail').value,password:document.getElementById('adminPassword').value});
+  if(error)message(`Sign in failed: ${error.message}`);
+});
+document.getElementById('logoutBtn').addEventListener('click',()=>db?.auth.signOut());
+document.getElementById('exportBtn').addEventListener('click',()=>{
+  const blob=new Blob([JSON.stringify(state,null,2)],{type:'application/json'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='sports-day-results.json';a.click();URL.revokeObjectURL(a.href);
+});
+document.getElementById('resetBtn').addEventListener('click',async()=>{
+  if(!isAdmin)return;
+  if(!confirm('Reset all results, team names and pool assignments?'))return;
+  const prior=JSON.stringify(state);
+  state.teams=['Team A','Team B','Team C','Team D','Team E','Team F'];
+  POOL_EVENTS.forEach(e=>state.pools[e]={A:[0,1,2],B:[3,4,5]});
+  state.results={};
+  if(await save())show('overall');else{Object.assign(state,JSON.parse(prior));show('overall');}
+});
+document.getElementById('loginBtn').hidden=false;
+renderAccess();
+if(!db){message('Configure Supabase in supabase-config.js to load and share live results.');show('overall');}
+else{
+  db.auth.getUser().then(({data,error})=>{
+    if(error)message(`Authentication status: ${error.message}`);
+    handleAccess(data?.user||null);
+  });
+  db.auth.onAuthStateChange((_event,session)=>{handleAccess(session?.user||null);});
+  db.channel('sports-day-results').on('postgres_changes',{event:'UPDATE',schema:'public',table:'tournament_state'},loadRemote).subscribe();
+  loadRemote();
+}
+async function handleAccess(user){
+  if(!user){isAdmin=false;renderAccess();if(current==='setup')current='overall';show(current);return;}
+  const {data,error}=await db.from('tournament_admins').select('user_id').eq('user_id',user.id).maybeSingle();
+  isAdmin=!error&&Boolean(data);
+  renderAccess();
+  if(!isAdmin){if(current==='setup')current='overall';show(current);message('This account is not authorized to edit this tournament.');await db.auth.signOut();return;}
+  message('Admin access enabled.');
+  await loadRemote();
+}
+show('overall');
+})();
+</script>
+</body>
+</html>

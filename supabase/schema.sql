@@ -1,13 +1,21 @@
 -- Run in the Supabase SQL Editor. Public visitors can read; only listed admins can write.
 create table if not exists public.tournament_admins (
-  user_id uuid primary key references auth.users(id) on delete cascade
+  user_id uuid primary key references auth.users(id) on delete cascade,
+  username text unique not null check (length(trim(username)) >= 3),
+  login_email text unique not null
 );
+alter table public.tournament_admins add column if not exists username text;
+alter table public.tournament_admins add column if not exists login_email text;
 alter table public.tournament_admins enable row level security;
 revoke all on public.tournament_admins from anon, authenticated;
-grant select on public.tournament_admins to authenticated;
+grant select (username, login_email) on public.tournament_admins to anon;
+grant select (username, login_email) on public.tournament_admins to authenticated;
 drop policy if exists "admins can read their own row" on public.tournament_admins;
+drop policy if exists "login can resolve admin username" on public.tournament_admins;
 create policy "admins can read their own row" on public.tournament_admins
   for select to authenticated using (auth.uid() = user_id);
+create policy "login can resolve admin username" on public.tournament_admins
+  for select to anon using (true);
 
 create table if not exists public.tournament_state (
   singleton boolean primary key default true check (singleton),

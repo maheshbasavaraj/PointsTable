@@ -100,7 +100,7 @@ td{padding:11px 9px;border-bottom:1px solid #292929;font-size:13px}
 
   <div class="tabs" id="tabs"></div>
   <main id="content"></main>
-  <div class="footer">Win = 2 points • Draw = 1 point each • Loss = 0 points</div>
+  <div class="footer">Win = 4 points • Draw = 2 points each • Loss = 0 points</div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -197,12 +197,18 @@ function pairs(indices){
 function emptyStats(){
   return state.teams.map(() => ({m:0,w:0,d:0,l:0,p:0}));
 }
+function resultCode(result){return typeof result==='string'?result.split(':')[0]:''}
+function resultPoints(result){
+  const value=Number(String(result||'').split(':')[1]);
+  return value>=1&&value<=4?value:4;
+}
 function addResult(s,a,b,r){
-  if(r !== 'A' && r !== 'B' && r !== 'D') return;
+  const code=resultCode(r);
+  if(code !== 'A' && code !== 'B' && code !== 'D') return;
   s[a].m++; s[b].m++;
-  if(r==='A'){s[a].w++;s[b].l++;s[a].p+=2}
-  if(r==='B'){s[b].w++;s[a].l++;s[b].p+=2}
-  if(r==='D'){s[a].d++;s[b].d++;s[a].p++;s[b].p++}
+  if(code==='A'){s[a].w++;s[b].l++;s[a].p+=resultPoints(r)}
+  if(code==='B'){s[b].w++;s[a].l++;s[b].p+=resultPoints(r)}
+  if(code==='D'){s[a].d++;s[b].d++;s[a].p+=2;s[b].p+=2}
 }
 function id(...x){return x.join('|')}
 function eventPoolStats(e){
@@ -259,9 +265,19 @@ function table(s){
 }
 function resultSelect(a,b,key){
   const v=state.results[key] || '';
+  const code=resultCode(v), custom=/^(Chess|Badminton)\|/.test(key);
   if(!isAdmin){
-    const label=v==='A'?`${state.teams[a]} Win`:v==='B'?`${state.teams[b]} Win`:v==='D'?'Draw':'—';
+    const label=code==='A'?`${state.teams[a]} Win${custom?` • ${resultPoints(v)} points`:''}`:code==='B'?`${state.teams[b]} Win${custom?` • ${resultPoints(v)} points`:''}`:code==='D'?'Draw • 2 points each':'—';
     return `<span class="result-display">${esc(label)}</span>`;
+  }
+  if(custom){
+    const points=resultPoints(v);
+    return `<select class="result" data-result="${esc(key)}">
+      <option value="">—</option>
+      ${[1,2,3,4].map(n=>`<option value="A:${n}" ${code==='A'&&points===n?'selected':''}>${esc(state.teams[a])} — ${n} point${n===1?'':'s'}</option>`).join('')}
+      <option value="D" ${code==='D'?'selected':''}>Draw — 2 points each</option>
+      ${[1,2,3,4].map(n=>`<option value="B:${n}" ${code==='B'&&points===n?'selected':''}>${esc(state.teams[b])} — ${n} point${n===1?'':'s'}</option>`).join('')}
+    </select>`;
   }
   return `<select class="result" data-result="${esc(key)}">
     <option value="">—</option>
@@ -278,8 +294,8 @@ function match(a,b,key){
   </div>`;
 }
 function winner(a,b,r){
-  if(r==='A') return a;
-  if(r==='B') return b;
+  if(resultCode(r)==='A') return a;
+  if(resultCode(r)==='B') return b;
   return null;
 }
 function poolStandings(e,pool){
@@ -387,8 +403,8 @@ function overall(){
       <div class="stats">
         <div class="stat"><b>${EVENTS.length}</b><span>Events</span></div>
         <div class="stat"><b>6</b><span>Teams</span></div>
-        <div class="stat"><b>2</b><span>Win Points</span></div>
-        <div class="stat"><b>1</b><span>Draw Points</span></div>
+        <div class="stat"><b>4</b><span>Win Points</span></div>
+        <div class="stat"><b>2</b><span>Draw Points</span></div>
       </div>
       ${table(s)}
     </section>
@@ -402,7 +418,7 @@ function overall(){
         <b>Box Cricket:</b> 2 pools → top 2 from each pool → semifinals → final.<br><br>
       </div>
       <div class="section-title">Scoring</div>
-      <div class="note">Win = <b>2 points</b> • Draw = <b>1 point each</b> • Loss = <b>0 points</b></div>
+      <div class="note">Win = <b>4 points</b> • Draw = <b>2 points each</b> • Loss = <b>0 points</b>.<br>Chess and Badminton match winners can be assigned <b>1–4 points</b>; the other team gets 0. A draw gives 2 points each.</div>
     </section>
   </div>`;
 }

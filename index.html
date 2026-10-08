@@ -45,6 +45,8 @@ select,input,.btn{background:#191919;color:#fff;border:1px solid #444;border-rad
 table{width:100%;border-collapse:collapse;min-width:570px}
 th{text-align:left;font-size:10px;color:#999;text-transform:uppercase;letter-spacing:.7px;padding:9px;border-bottom:1px solid #333}
 td{padding:11px 9px;border-bottom:1px solid #292929;font-size:13px}
+th:first-child,td.rank{position:sticky;left:0;z-index:2;width:38px;min-width:38px;background:#111}
+th:nth-child(2),td.team{position:sticky;left:38px;z-index:2;background:#111;box-shadow:2px 0 4px rgba(0,0,0,.35)}
 .rank{font-weight:900;color:#888}.team{font-weight:850}.points{font-weight:950;font-size:18px;color:var(--orange2)}
 .champion{background:rgba(255,101,0,.11)}
 .match{display:grid;grid-template-columns:1fr 110px 1fr;gap:8px;align-items:center;padding:9px 0;border-bottom:1px solid #292929}
@@ -86,6 +88,12 @@ td{padding:11px 9px;border-bottom:1px solid #292929;font-size:13px}
  .tab{padding:8px 11px;font-size:13px}.card{padding:11px}.card h2{font-size:16px}
  .match{grid-template-columns:minmax(0,1fr) 72px minmax(0,1fr);gap:4px}.match.custom-score-match{grid-template-columns:minmax(0,1fr) 42px 42px minmax(0,1fr);gap:3px}
  .team-name{font-size:11px}.result{font-size:12px}.custom-score{font-size:13px}
+ table{min-width:410px;table-layout:fixed}
+ th:first-child,td.rank{display:none}
+ th:nth-child(2),td.team{left:0;width:108px;min-width:108px;max-width:108px}
+ th:nth-child(3),td:nth-child(3){width:48px}
+ th:nth-child(4),td:nth-child(4),th:nth-child(5),td:nth-child(5),th:nth-child(6),td:nth-child(6){width:42px}
+ th:nth-child(7),td:nth-child(7){width:68px}
  th{padding:7px 6px;font-size:9px}td{padding:8px 6px;font-size:11px}.points{font-size:15px}
 }
 </style>

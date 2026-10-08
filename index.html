@@ -76,7 +76,7 @@ td{padding:11px 9px;border-bottom:1px solid #292929;font-size:13px}
     <div>
       <div class="kicker">DEPARTMENT OF CSE – DATA SCIENCE • SPORTS DAY</div>
       <h1>🏆 Overall Championship</h1>
-      <div class="subtitle">Pool Stage • Knockouts • 6-Round Swiss Chess • Live Points Table</div>
+      <div class="subtitle">Pool Stage • Knockouts • Live Points Table</div>
     </div>
     <div class="trophy">🏆</div>
   </section>
@@ -109,8 +109,8 @@ td{padding:11px 9px;border-bottom:1px solid #292929;font-size:13px}
 (() => {
 'use strict';
 
-const EVENTS = ['Basketball','Volleyball','Badminton','Tug of War','Chess','Box Cricket'];
-const POOL_EVENTS = ['Basketball','Volleyball','Badminton','Tug of War','Chess','Box Cricket'];
+const EVENTS = ['Basketball','Chess','Badminton','Tug of War','Box Cricket'];
+const POOL_EVENTS = EVENTS;
 
 const state = {
   teams: ['Team A','Team B','Team C','Team D','Team E','Team F'],
@@ -132,6 +132,19 @@ function renderAccess(){
 }
 
 POOL_EVENTS.forEach(e => state.pools[e] = {A:[0,1,2], B:[3,4,5]});
+function normalizeData(data){
+  const pools={...data.pools};
+  if(pools.Volleyball)pools.Chess=pools.Volleyball;
+  delete pools.Volleyball;
+  const results={};
+  Object.entries(data.results).forEach(([key,value])=>{
+    if(!key.startsWith('Volleyball|')&&!key.startsWith('Chess|round|'))results[key]=value;
+  });
+  Object.entries(data.results).forEach(([key,value])=>{
+    if(key.startsWith('Volleyball|'))results[`Chess|${key.slice('Volleyball|'.length)}`]=value;
+  });
+  return {...data,pools,results};
+}
 
 let current = 'overall';
 
@@ -145,10 +158,10 @@ async function loadRemote(){
   if(!db)return;
   const {data,error}=await db.from('tournament_state').select('state').eq('singleton',true).single();
   if(error){message(`Could not load the shared results: ${error.message}`);return;}
-  const x=data?.state;
+  const x=data?.state && normalizeData(data.state);
   if(x && Array.isArray(x.teams) && x.teams.length===6 && x.pools && x.results){
     state.teams=x.teams;
-    state.pools={...state.pools,...x.pools,Chess:x.pools.Chess||{A:[0,1,2],B:[3,4,5]}};
+    state.pools={...state.pools,...x.pools};
     state.results=x.results;
     show(current);
   }
@@ -208,9 +221,7 @@ function overallStats(){
     x.forEach((v,i)=>{
       ['m','w','d','l','p'].forEach(k=>s[i][k]+=v[k]);
     });
-    if(e!=='Chess'){
-      addKnockoutPoints(e,s);
-    }
+    addKnockoutPoints(e,s);
   });
   return s;
 }
@@ -341,48 +352,6 @@ function knockout(e){
   }
   return html;
 }
-function chess(){
-  let matches='';
-  for(let r=1;r<=6;r++){
-    const saved=state.results[id('Chess','round',r)];
-    if(!isAdmin && !saved){matches+=`<div class="section-title">Round ${r}</div><div class="empty">Pairing not entered.</div>`;continue;}
-    const x=saved || {a:0,b:1,result:''};
-    if(!isAdmin){
-      const result=x.result==='A'?'Left wins':x.result==='B'?'Right wins':x.result==='D'?'Draw':'Not played';
-      matches+=`<div class="section-title">Round ${r}</div><div class="match"><div class="team-name">${esc(state.teams[x.a])}</div><span class="result-display">${result}</span><div class="team-name right">${esc(state.teams[x.b])}</div></div>`;
-      continue;
-    }
-    matches+=`
-      <div class="section-title">Round ${r}</div>
-      <div class="match">
-        <select class="result chess-team" data-round="${r}" data-side="a">
-          ${state.teams.map((t,i)=>`<option value="${i}" ${i===x.a?'selected':''}>${esc(t)}</option>`).join('')}
-        </select>
-        <select class="result" data-chess-result="${r}">
-          <option value="">—</option>
-          <option value="A" ${x.result==='A'?'selected':''}>White/Left Win</option>
-          <option value="D" ${x.result==='D'?'selected':''}>Draw</option>
-          <option value="B" ${x.result==='B'?'selected':''}>Right Win</option>
-        </select>
-        <select class="result chess-team" data-round="${r}" data-side="b">
-          ${state.teams.map((t,i)=>`<option value="${i}" ${i===x.b?'selected':''}>${esc(t)}</option>`).join('')}
-        </select>
-      </div>`;
-  }
-  return `<div class="grid">
-    <section class="card">
-      <h2>♟ Chess — Pool Stage</h2>
-      <div class="desc">Two pools of three teams. Each team plays the other two teams in its pool.</div>
-      ${matches}
-      <div class="note">The winner of Pool A plays the winner of Pool B in the final. Use Team & Pool Setup to assign the pools.</div>
-    </section>
-    <section class="card">
-      <h2>Chess Standings</h2>
-      <div class="desc">Win = 2 • Draw = 1 • Loss = 0</div>
-      ${table(chessStats())}
-    </section>
-  </div>`;
-}
 function setup(){
   return `<section class="card">
     <h2>Team & Pool Setup</h2>
@@ -414,9 +383,9 @@ function overall(){
   <div class="grid">
     <section class="card">
       <h2>🏆 Overall Championship Points Table</h2>
-      <div class="desc">All recorded pool, semifinal, final and chess results are combined.</div>
+      <div class="desc">All recorded pool, semifinal and final results are combined.</div>
       <div class="stats">
-        <div class="stat"><b>6</b><span>Events</span></div>
+        <div class="stat"><b>${EVENTS.length}</b><span>Events</span></div>
         <div class="stat"><b>6</b><span>Teams</span></div>
         <div class="stat"><b>2</b><span>Win Points</span></div>
         <div class="stat"><b>1</b><span>Draw Points</span></div>
@@ -427,11 +396,10 @@ function overall(){
       <h2>Tournament Format</h2>
       <div class="note">
         <b>Basketball:</b> 2 pools → pool winners → final.<br><br>
-        <b>Volleyball:</b> 2 pools → pool winners → final.<br><br>
+        <b>Chess:</b> 2 pools → pool winners → final.<br><br>
         <b>Tug of War:</b> 2 pools → pool winners → final.<br><br>
         <b>Badminton:</b> 2 pools → top 2 from each pool → semifinals → final.<br><br>
         <b>Box Cricket:</b> 2 pools → top 2 from each pool → semifinals → final.<br><br>
-        <b>Chess:</b> 2 pools → pool winners → final.
       </div>
       <div class="section-title">Scoring</div>
       <div class="note">Win = <b>2 points</b> • Draw = <b>1 point each</b> • Loss = <b>0 points</b></div>
@@ -454,29 +422,6 @@ function bind(){
       const key=el.dataset.result,old=state.results[key];
       if(el.value)state.results[key]=el.value;else delete state.results[key];
       save().then(ok=>{if(ok)show(current);else{if(old)state.results[key]=old;else delete state.results[key];show(current);}});
-    });
-  });
-  content.querySelectorAll('[data-chess-result]').forEach(el=>{
-    el.addEventListener('change',()=>{
-      const r=Number(el.dataset.chessResult);
-      const aEl=content.querySelector(`.chess-team[data-round="${r}"][data-side="a"]`);
-      const bEl=content.querySelector(`.chess-team[data-round="${r}"][data-side="b"]`);
-      if(aEl.value===bEl.value){alert('A team cannot play itself.');return;}
-      const key=id('Chess','round',r),old=state.results[key];
-      state.results[key]={a:Number(aEl.value),b:Number(bEl.value),result:el.value};
-      save().then(ok=>{if(ok)show('Chess');else{if(old)state.results[key]=old;else delete state.results[key];show('Chess');}});
-    });
-  });
-  content.querySelectorAll('.chess-team').forEach(el=>{
-    el.addEventListener('change',()=>{
-      const r=Number(el.dataset.round);
-      const a=Number(content.querySelector(`.chess-team[data-round="${r}"][data-side="a"]`).value);
-      const b=Number(content.querySelector(`.chess-team[data-round="${r}"][data-side="b"]`).value);
-      if(a===b){alert('A team cannot play itself.');show('Chess');return;}
-      const old=state.results[id('Chess','round',r)]||{};
-      const key=id('Chess','round',r),prior=state.results[key];
-      state.results[key]={a,b,result:old.result||''};
-      save().then(ok=>{if(ok)show('Chess');else{if(prior)state.results[key]=prior;else delete state.results[key];show('Chess');}});
     });
   });
   document.getElementById('saveTeams')?.addEventListener('click',()=>{

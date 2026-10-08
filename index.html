@@ -45,6 +45,8 @@ td{padding:11px 9px;border-bottom:1px solid #292929;font-size:13px}
 .rank{font-weight:900;color:#888}.team{font-weight:850}.points{font-weight:950;font-size:18px;color:var(--orange2)}
 .champion{background:rgba(255,101,0,.11)}
 .match{display:grid;grid-template-columns:1fr 110px 1fr;gap:8px;align-items:center;padding:9px 0;border-bottom:1px solid #292929}
+.match.custom-score-match{grid-template-columns:minmax(0,1fr) 65px 65px minmax(0,1fr);gap:6px}
+.custom-score{width:100%;min-width:0;padding:7px 2px}
 .match:last-child{border-bottom:0}
 .team-name{font-size:13px;font-weight:800}.team-name.right{text-align:right}
 .result{width:100%;padding:8px 4px;background:#1b1b1b;color:#fff;border:1px solid #444;border-radius:8px}
@@ -67,6 +69,7 @@ td{padding:11px 9px;border-bottom:1px solid #292929;font-size:13px}
  .app{padding:13px}.hero{padding:17px}.trophy{display:none}h1{font-size:26px}
  .grid,.pool-grid{grid-template-columns:1fr}.stats{grid-template-columns:repeat(2,1fr)}
  .match{grid-template-columns:1fr 95px 1fr}
+ .match.custom-score-match{grid-template-columns:minmax(0,1fr) 54px 54px minmax(0,1fr);gap:4px}
 }
 </style>
 </head>
@@ -197,17 +200,39 @@ function pairs(indices){
 function emptyStats(){
   return state.teams.map(() => ({m:0,w:0,d:0,l:0,p:0}));
 }
-function resultCode(result){return typeof result==='string'?result.split(':')[0]:''}
-function resultPoints(result){
-  const value=Number(String(result||'').split(':')[1]);
-  return value>=1&&value<=4?value:4;
+function customScores(result){
+  if(result&&typeof result==='object'){
+    const a=Number(result.a),b=Number(result.b);
+    return Number.isInteger(a)&&a>=1&&a<=4&&Number.isInteger(b)&&b>=1&&b<=4?{a,b}:null;
+  }
+  if(result==='A')return {a:4,b:1};
+  if(result==='B')return {a:1,b:4};
+  if(result==='D')return {a:2,b:2};
+  const match=typeof result==='string'&&result.match(/^([AB]):([1-4])$/);
+  if(!match)return null;
+  const points=Number(match[2]);
+  return match[1]==='A'?{a:points,b:1}:{a:1,b:points};
 }
-function addResult(s,a,b,r){
+function resultCode(result){
+  const scores=customScores(result);
+  if(scores)return scores.a===scores.b?'D':scores.a>scores.b?'A':'B';
+  return typeof result==='string'?result.split(':')[0]:'';
+}
+function addResult(s,a,b,r,event=''){
+  if(event==='Chess'||event==='Badminton'){
+    const scores=customScores(r);
+    if(!scores)return;
+    s[a].m++;s[b].m++;s[a].p+=scores.a;s[b].p+=scores.b;
+    if(scores.a===scores.b){s[a].d++;s[b].d++;}
+    else if(scores.a>scores.b){s[a].w++;s[b].l++;}
+    else{s[b].w++;s[a].l++;}
+    return;
+  }
   const code=resultCode(r);
   if(code !== 'A' && code !== 'B' && code !== 'D') return;
   s[a].m++; s[b].m++;
-  if(code==='A'){s[a].w++;s[b].l++;s[a].p+=resultPoints(r)}
-  if(code==='B'){s[b].w++;s[a].l++;s[b].p+=resultPoints(r)}
+  if(code==='A'){s[a].w++;s[b].l++;s[a].p+=4}
+  if(code==='B'){s[b].w++;s[a].l++;s[b].p+=4}
   if(code==='D'){s[a].d++;s[b].d++;s[a].p+=2;s[b].p+=2}
 }
 function id(...x){return x.join('|')}
@@ -215,7 +240,7 @@ function eventPoolStats(e){
   const s=emptyStats();
   ['A','B'].forEach(pool=>{
     pairs(state.pools[e][pool]).forEach(([a,b])=>{
-      addResult(s,a,b,state.results[id(e,'pool',pool,a,b)]);
+      addResult(s,a,b,state.results[id(e,'pool',pool,a,b)],e);
     });
   });
   return s;
@@ -235,15 +260,15 @@ function addKnockoutPoints(e,s){
   const q=qualified(e);
   if(e==='Badminton' || e==='Box Cricket'){
     if(q.A.length>=2 && q.B.length>=2){
-      addResult(s,q.A[0],q.B[1],state.results[id(e,'semi',1)]);
-      addResult(s,q.B[0],q.A[1],state.results[id(e,'semi',2)]);
+      addResult(s,q.A[0],q.B[1],state.results[id(e,'semi',1)],e);
+      addResult(s,q.B[0],q.A[1],state.results[id(e,'semi',2)],e);
       const s1=winner(q.A[0],q.B[1],state.results[id(e,'semi',1)]);
       const s2=winner(q.B[0],q.A[1],state.results[id(e,'semi',2)]);
-      if(s1!==null && s2!==null) addResult(s,s1,s2,state.results[id(e,'final')]);
+      if(s1!==null && s2!==null) addResult(s,s1,s2,state.results[id(e,'final')],e);
     }
   } else {
     const a=poolWinner(e,'A'), b=poolWinner(e,'B');
-    if(a!==null && b!==null) addResult(s,a,b,state.results[id(e,'final')]);
+    if(a!==null && b!==null) addResult(s,a,b,state.results[id(e,'final')],e);
   }
 }
 function ranked(s){
@@ -266,18 +291,15 @@ function table(s){
 function resultSelect(a,b,key){
   const v=state.results[key] || '';
   const code=resultCode(v), custom=/^(Chess|Badminton)\|/.test(key);
-  if(!isAdmin){
-    const label=code==='A'?`${state.teams[a]} Win${custom?` • ${resultPoints(v)} points`:''}`:code==='B'?`${state.teams[b]} Win${custom?` • ${resultPoints(v)} points`:''}`:code==='D'?'Draw • 2 points each':'—';
-    return `<span class="result-display">${esc(label)}</span>`;
-  }
   if(custom){
-    const points=resultPoints(v);
-    return `<select class="result" data-result="${esc(key)}">
-      <option value="">—</option>
-      ${[1,2,3,4].map(n=>`<option value="A:${n}" ${code==='A'&&points===n?'selected':''}>${esc(state.teams[a])} — ${n} point${n===1?'':'s'}</option>`).join('')}
-      <option value="D" ${code==='D'?'selected':''}>Draw — 2 points each</option>
-      ${[1,2,3,4].map(n=>`<option value="B:${n}" ${code==='B'&&points===n?'selected':''}>${esc(state.teams[b])} — ${n} point${n===1?'':'s'}</option>`).join('')}
-    </select>`;
+    const scores=customScores(v);
+    if(!isAdmin)return `<span class="result-display">${scores?`${scores.a} : ${scores.b}`:'—'}</span>`;
+    return `<select class="result custom-score" data-result="${esc(key)}" data-score="a" aria-label="${esc(state.teams[a])} points"><option value="">—</option>${[1,2,3,4].map(n=>`<option value="${n}" ${scores?.a===n?'selected':''}>${n}</option>`).join('')}</select>
+      <select class="result custom-score" data-result="${esc(key)}" data-score="b" aria-label="${esc(state.teams[b])} points"><option value="">—</option>${[1,2,3,4].map(n=>`<option value="${n}" ${scores?.b===n?'selected':''}>${n}</option>`).join('')}</select>`;
+  }
+  if(!isAdmin){
+    const label=code==='A'?`${state.teams[a]} Win`:code==='B'?`${state.teams[b]} Win`:code==='D'?'Draw • 2 points each':'—';
+    return `<span class="result-display">${esc(label)}</span>`;
   }
   return `<select class="result" data-result="${esc(key)}">
     <option value="">—</option>
@@ -287,7 +309,8 @@ function resultSelect(a,b,key){
   </select>`;
 }
 function match(a,b,key){
-  return `<div class="match">
+  const custom=/^(Chess|Badminton)\|/.test(key);
+  return `<div class="match${custom?' custom-score-match':''}">
     <div class="team-name">${esc(state.teams[a])}</div>
     ${resultSelect(a,b,key)}
     <div class="team-name right">${esc(state.teams[b])}</div>
@@ -301,7 +324,7 @@ function winner(a,b,r){
 function poolStandings(e,pool){
   const s=emptyStats();
   pairs(state.pools[e][pool]).forEach(([a,b])=>{
-    addResult(s,a,b,state.results[id(e,'pool',pool,a,b)]);
+    addResult(s,a,b,state.results[id(e,'pool',pool,a,b)],e);
   });
   return ranked(s).filter(x=>state.pools[e][pool].includes(x.index));
 }
@@ -418,7 +441,7 @@ function overall(){
         <b>Box Cricket:</b> 2 pools → top 2 from each pool → semifinals → final.<br><br>
       </div>
       <div class="section-title">Scoring</div>
-      <div class="note">Win = <b>4 points</b> • Draw = <b>2 points each</b> • Loss = <b>0 points</b>.<br>Chess and Badminton match winners can be assigned <b>1–4 points</b>; the other team gets 0. A draw gives 2 points each.</div>
+      <div class="note">Win = <b>4 points</b> • Draw = <b>2 points each</b> • Loss = <b>0 points</b>.<br>For Chess and Badminton, assign <b>1–4 points to each player</b> per match. The higher score wins; equal scores count as a draw.</div>
     </section>
   </div>`;
 }
@@ -436,7 +459,12 @@ function bind(){
   content.querySelectorAll('[data-result]').forEach(el=>{
     el.addEventListener('change',()=>{
       const key=el.dataset.result,old=state.results[key];
-      if(el.value)state.results[key]=el.value;else delete state.results[key];
+      if(el.dataset.score){
+        const row=el.closest('.match'),a=row.querySelector('[data-score="a"]').value,b=row.querySelector('[data-score="b"]').value;
+        if(!a&&!b)delete state.results[key];
+        else if(!a||!b){message('Assign points to both players in this match.');return;}
+        else state.results[key]={a:Number(a),b:Number(b)};
+      }else if(el.value)state.results[key]=el.value;else delete state.results[key];
       save().then(ok=>{if(ok)show(current);else{if(old)state.results[key]=old;else delete state.results[key];show(current);}});
     });
   });

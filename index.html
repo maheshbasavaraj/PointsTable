@@ -249,12 +249,12 @@ function emptyStats(){
 function customScores(result){
   if(result&&typeof result==='object'){
     const a=Number(result.a),b=Number(result.b);
-    return Number.isInteger(a)&&a>=1&&a<=4&&Number.isInteger(b)&&b>=1&&b<=4?{a,b}:null;
+    return Number.isInteger(a)&&a>=0&&a<=4&&Number.isInteger(b)&&b>=0&&b<=4?{a,b}:null;
   }
   if(result==='A')return {a:4,b:1};
   if(result==='B')return {a:1,b:4};
   if(result==='D')return {a:2,b:2};
-  const match=typeof result==='string'&&result.match(/^([AB]):([1-4])$/);
+  const match=typeof result==='string'&&result.match(/^([AB]):([0-4])$/);
   if(!match)return null;
   const points=Number(match[2]);
   return match[1]==='A'?{a:points,b:1}:{a:1,b:points};
@@ -304,18 +304,12 @@ function overallStats(){
 }
 function addKnockoutPoints(e,s){
   const q=qualified(e);
-  if(e==='Badminton' || e==='Box Cricket'){
-    if(q.A.length>=2 && q.B.length>=2){
-      addResult(s,q.A[0],q.B[1],state.results[id(e,'semi',1)],e);
-      addResult(s,q.B[0],q.A[1],state.results[id(e,'semi',2)],e);
-      const s1=winner(q.A[0],q.B[1],state.results[id(e,'semi',1)]);
-      const s2=winner(q.B[0],q.A[1],state.results[id(e,'semi',2)]);
-      if(s1!==null && s2!==null) addResult(s,s1,s2,state.results[id(e,'final')],e);
-    }
-  } else {
-    const a=poolWinner(e,'A'), b=poolWinner(e,'B');
-    if(a!==null && b!==null) addResult(s,a,b,state.results[id(e,'final')],e);
-  }
+  if(q.A.length<2 || q.B.length<2)return;
+  addResult(s,q.A[0],q.B[1],state.results[id(e,'semi',1)],e);
+  addResult(s,q.B[0],q.A[1],state.results[id(e,'semi',2)],e);
+  const s1=winner(q.A[0],q.B[1],state.results[id(e,'semi',1)]);
+  const s2=winner(q.B[0],q.A[1],state.results[id(e,'semi',2)]);
+  if(s1!==null && s2!==null)addResult(s,s1,s2,state.results[id(e,'final')],e);
 }
 function ranked(s){
   return s.map((x,i)=>({...x,index:i,team:state.teams[i]}))
@@ -340,8 +334,8 @@ function resultSelect(a,b,key){
   if(custom){
     const scores=customScores(v);
     if(!editMode)return `<span class="result-display">${scores?`${scores.a} : ${scores.b}`:'—'}</span>`;
-    return `<select class="result custom-score" data-result="${esc(key)}" data-score="a" aria-label="${esc(state.teams[a])} points"><option value="">—</option>${[1,2,3,4].map(n=>`<option value="${n}" ${scores?.a===n?'selected':''}>${n}</option>`).join('')}</select>
-      <select class="result custom-score" data-result="${esc(key)}" data-score="b" aria-label="${esc(state.teams[b])} points"><option value="">—</option>${[1,2,3,4].map(n=>`<option value="${n}" ${scores?.b===n?'selected':''}>${n}</option>`).join('')}</select>`;
+    return `<select class="result custom-score" data-result="${esc(key)}" data-score="a" aria-label="${esc(state.teams[a])} points"><option value="">—</option>${[0,1,2,3,4].map(n=>`<option value="${n}" ${scores?.a===n?'selected':''}>${n}</option>`).join('')}</select>
+      <select class="result custom-score" data-result="${esc(key)}" data-score="b" aria-label="${esc(state.teams[b])} points"><option value="">—</option>${[0,1,2,3,4].map(n=>`<option value="${n}" ${scores?.b===n?'selected':''}>${n}</option>`).join('')}</select>`;
   }
   if(!editMode){
     const label=code==='A'?`${state.teams[a]} Win`:code==='B'?`${state.teams[b]} Win`:code==='D'?'Draw • 2 points each':'—';
@@ -373,10 +367,6 @@ function poolStandings(e,pool){
     addResult(s,a,b,state.results[id(e,'pool',pool,a,b)],e);
   });
   return ranked(s).filter(x=>state.pools[e][pool].includes(x.index));
-}
-function poolWinner(e,pool){
-  const r=poolStandings(e,pool);
-  return r.length===3 && r.every(x=>x.m===2) ? r[0].index : null;
 }
 function qualified(e){
   const complete=pool=>{
@@ -414,27 +404,19 @@ function poolMatches(e){
 function knockout(e){
   const q=qualified(e);
   let html='';
-  if(e==='Badminton'||e==='Box Cricket'){
-    html+=`<section class="card"><h2>Semifinals</h2><div class="desc">Top 2 teams from each pool qualify.</div>`;
-    if(q.A.length>=2 && q.B.length>=2){
-      html+=match(q.A[0],q.B[1],id(e,'semi',1));
-      html+=match(q.B[0],q.A[1],id(e,'semi',2));
-    }else html+='<div class="empty">Complete the pool matches to determine the semifinalists.</div>';
-    html+='</section>';
+  html+=`<section class="card"><h2>Semifinals</h2><div class="desc">Top 2 teams from each pool qualify.</div>`;
+  if(q.A.length>=2 && q.B.length>=2){
+    html+=match(q.A[0],q.B[1],id(e,'semi',1));
+    html+=match(q.B[0],q.A[1],id(e,'semi',2));
+  }else html+='<div class="empty">Complete the pool matches to determine the semifinalists.</div>';
+  html+='</section>';
 
-    const s1=q.A.length>=2&&q.B.length>=2?winner(q.A[0],q.B[1],state.results[id(e,'semi',1)]):null;
-    const s2=q.A.length>=2&&q.B.length>=2?winner(q.B[0],q.A[1],state.results[id(e,'semi',2)]):null;
-    html+=`<section class="card"><h2>Final</h2><div class="desc">Semifinal winners meet in the final.</div>`;
-    if(s1!==null && s2!==null) html+=match(s1,s2,id(e,'final'));
-    else html+='<div class="empty">Complete both semifinals to determine the finalists.</div>';
-    html+='</section>';
-  }else{
-    html+=`<section class="card"><h2>Final</h2><div class="desc">Winner of Pool A vs Winner of Pool B.</div>`;
-    const a=poolWinner(e,'A'),b=poolWinner(e,'B');
-    if(a!==null&&b!==null) html+=match(a,b,id(e,'final'));
-    else html+='<div class="empty">Complete both pool stages to determine the finalists.</div>';
-    html+='</section>';
-  }
+  const s1=q.A.length>=2&&q.B.length>=2?winner(q.A[0],q.B[1],state.results[id(e,'semi',1)]):null;
+  const s2=q.A.length>=2&&q.B.length>=2?winner(q.B[0],q.A[1],state.results[id(e,'semi',2)]):null;
+  html+=`<section class="card"><h2>Final</h2><div class="desc">Semifinal winners meet in the final.</div>`;
+  if(s1!==null && s2!==null) html+=match(s1,s2,id(e,'final'));
+  else html+='<div class="empty">Complete both semifinals to determine the finalists.</div>';
+  html+='</section>';
   return html;
 }
 function setup(){
@@ -480,14 +462,14 @@ function overall(){
     <section class="card">
       <h2>Tournament Format</h2>
       <div class="note">
-        <b>Basketball:</b> 2 pools → pool winners → final.<br><br>
-        <b>Chess:</b> 2 pools → pool winners → final.<br><br>
-        <b>Tug of War:</b> 2 pools → pool winners → final.<br><br>
+        <b>Basketball:</b> 2 pools → top 2 from each pool → semifinals → final.<br><br>
+        <b>Chess:</b> 2 pools → top 2 from each pool → semifinals → final.<br><br>
+        <b>Tug of War:</b> 2 pools → top 2 from each pool → semifinals → final.<br><br>
         <b>Badminton:</b> 2 pools → top 2 from each pool → semifinals → final.<br><br>
         <b>Box Cricket:</b> 2 pools → top 2 from each pool → semifinals → final.<br><br>
       </div>
       <div class="section-title">Scoring</div>
-      <div class="note">Win = <b>4 points</b> • Draw = <b>2 points each</b> • Loss = <b>0 points</b>.<br>For Chess and Badminton, assign <b>1–4 points to each player</b> per match. The higher score wins; equal scores count as a draw.</div>
+      <div class="note">Win = <b>4 points</b> • Draw = <b>2 points each</b> • Loss = <b>0 points</b>.<br>For Chess and Badminton, assign <b>0–4 points to each player</b> per match. The higher score wins; equal scores count as a draw.</div>
     </section>
   </div>`;
 }
@@ -500,7 +482,7 @@ function show(e){
       <h2>About Sports Day</h2>
       <div class="desc">Department of CSE – Data Science • Dayananda Sagar Institutions</div>
       <p>This dashboard presents the Sports Day championship standings and match results across Basketball, Chess, Badminton, Tug of War and Box Cricket.</p>
-      <p>Wins award 4 points, draws award 2 points to each team, and losses award 0 points. Chess and Badminton use organizer-assigned points from 1 to 4 for each player.</p>
+      <p>Wins award 4 points, draws award 2 points to each team, and losses award 0 points. Chess and Badminton use organizer-assigned points from 0 to 4 for each player.</p>
       <p>Results are shared live with viewers. Only an authorized administrator can enter edit mode and update the tournament.</p>
       <img src="./college_logo.png" alt="Dayananda Sagar Institutions logo" style="display:block;width:min(220px,70%);margin:20px auto 0;border-radius:50%;background:#fff">
     </section>`;
